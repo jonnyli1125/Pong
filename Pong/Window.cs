@@ -223,6 +223,7 @@ namespace Pong
                 {
                     if (BallX <= BorderLeft) PointsRight++;
                     else PointsLeft++;
+                    if (PointsRight > 50 || PointsLeft > 50) { PointsRight = 0; PointsLeft = 0; }
                     ResetGame(true);
                     DontMoveBall = true;
                 }
@@ -324,10 +325,10 @@ namespace Pong
                 DrawBall();
                 TextPrinter.Begin();
                 font = new Font(GetFontFamily("Bebas") ?? FontFamily.GenericMonospace, 50.0f);
-                RectangleSpace = new RectangleF(200, (ClientRectangle.Height / 2) - 50, 50, 100);
-                TextPrinter.Print(PointsLeft.ToString(), font, SystemColors.ControlDarkDark, RectangleSpace, TextPrinterOptions.Default, TextAlignment.Center);
-                RectangleSpace = new RectangleF((ClientRectangle.Width - (200 + PaddleRight.Width)), (ClientRectangle.Height / 2) - 50, 50, 100);
-                TextPrinter.Print(PointsRight.ToString(), font, SystemColors.ControlDarkDark, RectangleSpace, TextPrinterOptions.Default, TextAlignment.Center);
+                RectangleSpace = new RectangleF(200, (ClientRectangle.Height / 2) - 50, 100, 100);
+                TextPrinter.Print(PointsLeft.ToString(), font, SystemColors.ControlDarkDark, RectangleSpace, TextPrinterOptions.Default, TextAlignment.Near);
+                RectangleSpace = new RectangleF(ClientRectangle.Width - (200 + PaddleRight.Width), (ClientRectangle.Height / 2) - 50, 100, 100);
+                TextPrinter.Print(PointsRight.ToString(), font, SystemColors.ControlDarkDark, RectangleSpace, TextPrinterOptions.Default, TextAlignment.Near);
                 TextPrinter.End();
             }
             else if (CurrentPage == 3)
