@@ -13,6 +13,7 @@ using OpenTK.Input;
 using BeginMode = OpenTK.Graphics.OpenGL.BeginMode;
 using ClearBufferMask = OpenTK.Graphics.OpenGL.ClearBufferMask;
 using GL = OpenTK.Graphics.OpenGL.GL;
+using TextPrinter = OpenTK.Graphics.TextPrinter;
 using Timer = System.Timers.Timer;
 
 namespace Pong
@@ -209,6 +210,7 @@ namespace Pong
             {
                 // 45 frames = 750 ms
                 if (DontMoveBall && MoveBallCounter < 45) { MoveBallCounter++; return; }
+                else if (MoveBallCounter >= 45) MoveBallCounter = 0;
                 DontMoveBall = false;
                 if (!SpeedTimer.Enabled) SpeedTimer.Start();
                 float BallX = BallPosition.X + ((BallXDirection >= 0) ? BallRadius : BallRadius * -1), BallY = BallPosition.Y + ((BallYDirection >= 0) ? BallRadius : BallRadius * -1), BorderLeft = 20, BorderRight = ClientRectangle.Width - 20, BorderTop = 20, BorderBottom = ClientRectangle.Height - 20;
