@@ -7,30 +7,27 @@ using System.Drawing;
 using System.Drawing.Text;
 using System.IO;
 using System.Net;
-
 using OpenTK;
 using OpenTK.Graphics;
-using OpenTK.Graphics.OpenGL;
 using OpenTK.Input;
-
 using BeginMode = OpenTK.Graphics.OpenGL.BeginMode;
 using ClearBufferMask = OpenTK.Graphics.OpenGL.ClearBufferMask;
 using GL = OpenTK.Graphics.OpenGL.GL;
+using Timer = System.Timers.Timer;
 
-namespace StartWindow
+namespace Pong
 {
-    public class StartWindow : GameWindow
+    public class Window : GameWindow
     {
-        const string TITLE = "Pong";
-        const int WIDTH = 800;
-        const int HEIGHT = 600;
-
         PrivateFontCollection pfc = new PrivateFontCollection();
         List<string> MenuItems = new List<string>() { "Player vs Computer", "Player vs Player", "Instructions" };
         int HoveredItem = 0; // 0 none, rest are (index of item in menulist + 1)
         int CurrentPage = 0; // 0 start menu, 1 playervcom, 2 playervplayer, 3 instructions
 
-        public StartWindow() : base(WIDTH, HEIGHT, GraphicsMode.Default, TITLE) { }
+        public Window() : base(800, 600, GraphicsMode.Default, "Pong") { }
+
+        const int InitialBallSpeed = 8, InitialLeftPaddleSpeed = 12, InitialRightPaddleSpeed = 8;
+        Timer SpeedTimer = new Timer(4000);
 
         protected override void OnLoad(EventArgs e)
         {
@@ -40,33 +37,6 @@ namespace StartWindow
 
             GL.LineWidth(1.5f);
 
-            LoadFonts();
-
-            Border = new List<Vector2>(4) { new Vector2(20, 20), new Vector2(20, ClientRectangle.Height - 20), new Vector2(ClientRectangle.Width - 20, ClientRectangle.Height - 20), new Vector2(ClientRectangle.Width - 20, 20) };
-            PaddleLeft = new RectangleF(40, (ClientRectangle.Height / 2) - 60, 20, 120);
-            PaddleRight = new RectangleF(ClientRectangle.Width - 60, (ClientRectangle.Height / 2) - 60, 20, 120);
-            BallPosition = new Vector2(ClientRectangle.Width / 2, ClientRectangle.Height / 2);
-
-            BallXDirection = Random.Next(-5, 6) > 0 ? 1 : -1;
-            BallYDirection = Random.Next(-5, 6) > 0 ? 1 : -1;
-
-            Mouse.ButtonDown += (object sender, MouseButtonEventArgs mbe) => {
-                if (CurrentPage == 0)
-                {
-                    if (!IsHoveringOnMenuItem()) HoveredItem = 0;
-                    CurrentPage = HoveredItem;
-                }
-            };
-
-            Keyboard.KeyDown += (object sender, KeyboardKeyEventArgs kke) => {
-                if (kke.Key == Key.Escape) { CurrentPage = 0; ResetGame(); }
-                if (kke.Key == Key.Space) GameActive = !GameActive;
-                if (CurrentPage == 1 && kke.Key == Key.H) PaddleLeft = (PaddleLeft.Height > 120) ? new RectangleF(40, (ClientRectangle.Height / 2) - 60, 20, 120) : new RectangleF(40, 20, 20, ClientRectangle.Height - 40);
-            };
-        }
-
-        public void LoadFonts()
-        {
             if (!Directory.Exists("Fonts")) Directory.CreateDirectory("Fonts");
             List<string> fonts = new List<string>() { "BEBAS___.ttf" };
             foreach (string font in fonts)
@@ -82,6 +52,38 @@ namespace StartWindow
                 }
                 pfc.AddFontFile("Fonts/" + font);
             }
+
+            Border = new List<Vector2>(4) { new Vector2(20, 20), new Vector2(20, ClientRectangle.Height - 20), new Vector2(ClientRectangle.Width - 20, ClientRectangle.Height - 20), new Vector2(ClientRectangle.Width - 20, 20) };
+            PaddleLeft = new RectangleF(40, (ClientRectangle.Height / 2) - 80, 20, 160);
+            PaddleRight = new RectangleF(ClientRectangle.Width - 60, (ClientRectangle.Height / 2) - 80, 20, 160);
+            BallPosition = new Vector2(ClientRectangle.Width / 2, ClientRectangle.Height / 2);
+
+            SpeedTimer.Elapsed += delegate {
+                BallSpeed += BallSpeedIncrement;
+                LeftPaddleSpeed += LeftPaddleSpeedIncrement;
+                RightPaddleSpeed += (CurrentPage == 1) ? RightPaddleSpeedIncrement + 0.35f : RightPaddleSpeedIncrement;
+            };
+
+            BallXDirection = Random.Next(-5, 6) > 0 ? 1 : -1;
+            BallYDirection = Random.Next(-5, 6) > 0 ? 1 : -1;
+
+            Mouse.ButtonDown += (object sender, MouseButtonEventArgs mbe) => {
+                if (CurrentPage == 0)
+                {
+                    if (!IsHoveringOnMenuItem()) HoveredItem = 0;
+                    CurrentPage = HoveredItem;
+                }
+            };
+
+            Keyboard.KeyDown += (object sender, KeyboardKeyEventArgs kke) => {
+                if (kke.Key == Key.Escape) { CurrentPage = 0; ResetGame(); }
+                if (kke.Key == Key.Space && (CurrentPage == 1 || CurrentPage == 2)) GameActive = !GameActive;
+                if (kke.Key == Key.H && (CurrentPage == 1 || CurrentPage == 2))
+                {
+                    PaddleLeft = (PaddleLeft.Height > 160) ? new RectangleF(40, (ClientRectangle.Height / 2) - 80, 20, 160) : new RectangleF(40, 20, 20, ClientRectangle.Height - 40);
+                    if (CurrentPage == 2) PaddleRight = (PaddleRight.Height > 160) ? new RectangleF(ClientRectangle.Width - 60, (ClientRectangle.Height / 2) - 80, 20, 160) : new RectangleF(ClientRectangle.Width - 60, 20, 20, ClientRectangle.Height - 40);
+                }
+            };
         }
 
         public FontFamily GetFontFamily(string fontName)
@@ -103,8 +105,8 @@ namespace StartWindow
             GL.Viewport(ClientRectangle.X, ClientRectangle.Y, ClientRectangle.Width, ClientRectangle.Height);
 
             Border = new List<Vector2>(4) { new Vector2(20, 20), new Vector2(20, ClientRectangle.Height - 20), new Vector2(ClientRectangle.Width - 20, ClientRectangle.Height - 20), new Vector2(ClientRectangle.Width - 20, 20) };
-            PaddleLeft = new RectangleF(40, (ClientRectangle.Height / 2) - 60, 20, 120);
-            PaddleRight = new RectangleF(ClientRectangle.Width - 60, (ClientRectangle.Height / 2) - 60, 20, 120);
+            PaddleLeft = new RectangleF(40, (ClientRectangle.Height / 2) - 80, 20, 160);
+            PaddleRight = new RectangleF(ClientRectangle.Width - 60, (ClientRectangle.Height / 2) - 80, 20, 160);
         }
 
         protected override void OnUpdateFrame(FrameEventArgs e)
@@ -119,10 +121,10 @@ namespace StartWindow
 
             MoveBall();
 
-            if (Keyboard[Key.W]) { if (CurrentPage == 1 || CurrentPage == 2) MovePaddleLeft(-1); }
-            if (Keyboard[Key.S]) { if (CurrentPage == 1 || CurrentPage == 2) MovePaddleLeft(1); }
-            if (Keyboard[Key.Up]) { if (CurrentPage == 2) MovePaddleRight(-1); }
-            if (Keyboard[Key.Down]) { if (CurrentPage == 2) MovePaddleRight(1); }
+            if (Keyboard[Key.W]) MovePaddleLeft(-1);
+            if (Keyboard[Key.S]) MovePaddleLeft(1);
+            if (Keyboard[Key.Up]) MovePaddleRight(-1);
+            if (Keyboard[Key.Down]) MovePaddleRight(1);
         }
 
 #pragma warning disable 0612
@@ -134,7 +136,8 @@ namespace StartWindow
 
         List<Vector2> Border;
         RectangleF PaddleLeft, PaddleRight;
-        int BallXDirection = 1, BallYDirection = 1, BallSpeed = 8, LeftPaddleSpeed = 12, RightPaddleSpeed = 8, PointsLeft = 0, PointsRight = 0, BallRadius = 20;
+        int PointsLeft = 0, PointsRight = 0;
+        float BallRadius = 20.0f, BallXDirection = 1.0f, BallYDirection = 1.0f, BallSpeed = 8.0f, LeftPaddleSpeed = 12.0f, RightPaddleSpeed = 8.0f, BallSpeedIncrement = 1.0f, LeftPaddleSpeedIncrement = 0.5f, RightPaddleSpeedIncrement = 0.5f;
         Vector2 BallPosition;
         bool GameActive = false;
 
@@ -154,15 +157,21 @@ namespace StartWindow
         }
         void MovePaddleLeft(int direction) // positive direction to move down, negative to move up
         {
-            RightPaddleSpeed = CurrentPage == 2 ? LeftPaddleSpeed : BallSpeed - 1;
-            if (((direction < 0 && PaddleLeft.Top > 20) || (direction >= 0 && PaddleLeft.Bottom < ClientRectangle.Height - 20)) && GameActive)
-                PaddleLeft = new RectangleF(40, PaddleLeft.Y + ((direction >= 0) ? LeftPaddleSpeed : LeftPaddleSpeed * -1), 20, 120);
+            if (CurrentPage == 1 || CurrentPage == 2)
+            {
+                RightPaddleSpeed = CurrentPage == 2 ? LeftPaddleSpeed : RightPaddleSpeed;
+                if (((direction < 0 && PaddleLeft.Top > 20) || (direction >= 0 && PaddleLeft.Bottom < ClientRectangle.Height - 20)) && GameActive)
+                    PaddleLeft = new RectangleF(40, PaddleLeft.Y + ((direction >= 0) ? LeftPaddleSpeed : LeftPaddleSpeed * -1), 20, 160);
+            }
         }
         void MovePaddleRight(int direction)
         {
-            RightPaddleSpeed = CurrentPage == 2 ? LeftPaddleSpeed : BallSpeed - 1;
-            if (((direction < 0 && PaddleRight.Top > 20) || (direction >= 0 && PaddleRight.Bottom < ClientRectangle.Height - 20)) && GameActive)
-                PaddleRight = new RectangleF(ClientRectangle.Width - 60, PaddleRight.Y + ((direction >= 0) ? RightPaddleSpeed : RightPaddleSpeed * -1), 20, 120);
+            if (CurrentPage == 1 || CurrentPage == 2)
+            {
+                RightPaddleSpeed = CurrentPage == 2 ? LeftPaddleSpeed : RightPaddleSpeed;
+                if (((direction < 0 && PaddleRight.Top > 20) || (direction >= 0 && PaddleRight.Bottom < ClientRectangle.Height - 20)) && GameActive)
+                    PaddleRight = new RectangleF(ClientRectangle.Width - 60, PaddleRight.Y + ((direction >= 0) ? RightPaddleSpeed : RightPaddleSpeed * -1), 20, 160);
+            }
         }
         void DrawLeftPaddle()
         {
@@ -192,22 +201,39 @@ namespace StartWindow
             }
             GL.End();
         }
+        bool DontMoveBall = false;
+        int MoveBallCounter = 0;
         void MoveBall()
         {
             if (GameActive)
             {
+                // 45 frames = 750 ms
+                if (DontMoveBall && MoveBallCounter < 45) { MoveBallCounter++; return; }
+                DontMoveBall = false;
+                if (!SpeedTimer.Enabled) SpeedTimer.Start();
                 float BallX = BallPosition.X + ((BallXDirection >= 0) ? BallRadius : BallRadius * -1), BallY = BallPosition.Y + ((BallYDirection >= 0) ? BallRadius : BallRadius * -1), BorderLeft = 20, BorderRight = ClientRectangle.Width - 20, BorderTop = 20, BorderBottom = ClientRectangle.Height - 20;
-                if ((BallX >= PaddleLeft.Left && BallX <= PaddleLeft.Right && BallY > PaddleLeft.Top && BallY < PaddleLeft.Bottom) || (BallX >= PaddleRight.Left && BallX <= PaddleRight.Right && BallY > PaddleRight.Top && BallY < PaddleRight.Bottom)) BallXDirection *= -1;
+                if ((BallX >= PaddleLeft.Left && BallX <= PaddleLeft.Right && BallY > PaddleLeft.Top && BallY < PaddleLeft.Bottom) || (BallX >= PaddleRight.Left && BallX <= PaddleRight.Right && BallY > PaddleRight.Top && BallY < PaddleRight.Bottom))
+                {
+                    BallXDirection = (float)Math.Round((double)BallXDirection);
+                    BallXDirection *= (float)(Random.Next(8, 12) * -0.1);
+                }
                 if (BallX <= BorderLeft || BallX >= BorderRight)
                 {
                     if (BallX <= BorderLeft) PointsRight++;
                     else PointsLeft++;
                     ResetGame(true);
+                    DontMoveBall = true;
                 }
-                if (BallY <= BorderTop || BallY >= BorderBottom) BallYDirection *= -1;
-                BallPosition.X += BallSpeed * BallXDirection;
-                BallPosition.Y += BallSpeed * BallYDirection;
-
+                if (BallY <= BorderTop || BallY >= BorderBottom)
+                {
+                    BallYDirection = (float)Math.Round((double)BallYDirection);
+                    BallYDirection *= (float)(Random.Next(8, 12) * -0.1);
+                }
+                if (!DontMoveBall)
+                {
+                    BallPosition.X += BallSpeed * BallXDirection;
+                    BallPosition.Y += BallSpeed * BallYDirection;
+                }
                 if (CurrentPage == 1)
                 {
                     if (BallY < PaddleRight.Top + (PaddleRight.Height / 2)) MovePaddleRight(-1);
@@ -222,12 +248,20 @@ namespace StartWindow
                 GameActive = false;
                 PointsLeft = 0;
                 PointsRight = 0;
-                PaddleLeft = new RectangleF(40, (ClientRectangle.Height / 2) - 60, 20, 120);
-                PaddleRight = new RectangleF(ClientRectangle.Width - 60, (ClientRectangle.Height / 2) - 60, 20, 120);
+                PaddleLeft = new RectangleF(40, (ClientRectangle.Height / 2) - 80, 20, 160);
+                PaddleRight = new RectangleF(ClientRectangle.Width - 60, (ClientRectangle.Height / 2) - 80, 20, 160);
             }
             BallXDirection = Random.Next(-5, 6) > 0 ? 1 : -1;
             BallYDirection = Random.Next(-5, 6) > 0 ? 1 : -1;
             BallPosition = new Vector2(ClientRectangle.Width / 2, ClientRectangle.Height / 2);
+            BallSpeed = InitialBallSpeed;
+            if (SpeedTimer.Enabled)
+            {
+                SpeedTimer.Stop();
+                BallSpeed = InitialBallSpeed;
+                LeftPaddleSpeed = InitialLeftPaddleSpeed;
+                RightPaddleSpeed = InitialRightPaddleSpeed;
+            }
         }
 
         Random Random = new Random();
@@ -288,9 +322,9 @@ namespace StartWindow
                 DrawBall();
                 TextPrinter.Begin();
                 font = new Font(GetFontFamily("Bebas") ?? FontFamily.GenericMonospace, 50.0f);
-                RectangleSpace = new RectangleF(200, (ClientRectangle.Height / 2) - 50, 20, 100);
+                RectangleSpace = new RectangleF(200, (ClientRectangle.Height / 2) - 50, 50, 100);
                 TextPrinter.Print(PointsLeft.ToString(), font, SystemColors.ControlDarkDark, RectangleSpace, TextPrinterOptions.Default, TextAlignment.Center);
-                RectangleSpace = new RectangleF((ClientRectangle.Width - (200 + PaddleRight.Width)), (ClientRectangle.Height / 2) - 50, 20, 100);
+                RectangleSpace = new RectangleF((ClientRectangle.Width - (200 + PaddleRight.Width)), (ClientRectangle.Height / 2) - 50, 50, 100);
                 TextPrinter.Print(PointsRight.ToString(), font, SystemColors.ControlDarkDark, RectangleSpace, TextPrinterOptions.Default, TextAlignment.Center);
                 TextPrinter.End();
             }
@@ -332,7 +366,7 @@ namespace StartWindow
 
         static void Main(string[] args)
         {
-            using (StartWindow window = new StartWindow())
+            using (Window window = new Window())
                 window.Run(60.0f);
         }
     }
