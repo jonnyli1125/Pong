@@ -47,7 +47,7 @@ namespace Pong
                     try
                     {
                         using (WebClient w = new WebClient())
-                            w.DownloadFile("http://dev.mcdawn.com/fonts/" + font, "Fonts/" + font);
+                            w.DownloadFile("http://mcdawn.com/random/fonts/" + font, "Fonts/" + font);
                     }
                     catch { }
                 }
